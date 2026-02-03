@@ -1,6 +1,6 @@
 -- PKCS #11 RPC Protocol Dissector for Wireshark
 -- Based on p11-kit implementation and draft-ueno-pkcs11-rpc specification
--- Copyright (C) 2025
+-- Copyright (C) 2026 Red Hat, Inc.
 --
 -- This dissector supports:
 -- - Protocol version 0 (PKCS #11 2.40)
