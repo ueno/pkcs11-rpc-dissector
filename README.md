@@ -2,13 +2,11 @@
 
 A Wireshark dissector plugin for the PKCS #11 RPC [protocol][draft-ueno-pkcs11-rpc] as implemented by [p11-kit][p11-kit].
 
-## Overview
+## Screenshots
 
-This dissector supports the complete PKCS #11 RPC protocol across all three versions:
-
-- **Version 0**: PKCS #11 2.40 functions (Call IDs 1-65)
-- **Version 1**: PKCS #11 3.0 functions including message-based encryption/signature (Call IDs 66-87)
-- **Version 2**: Extended functions with mechanism parameter updates (Call IDs 88-89)
+<div align="center">
+    <img src="./screenshot1.png" />
+</div>
 
 ## Features
 
