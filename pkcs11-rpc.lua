@@ -501,7 +501,7 @@ function vsock_wrapper_proto.dissector(tvbuf, pktinfo, root)
     if vsock_dissector then
         vsock_dissector:call(tvbuf, pktinfo, root)
     else
-	return
+        return
     end
 
     -- Now find where the payload starts
@@ -521,7 +521,7 @@ function vsock_wrapper_proto.dissector(tvbuf, pktinfo, root)
                 local buffer_length = payload_tvb(8, 4):uint()
 
                 -- Check if total size matches
-		if payload_len >= 12 + options_length + buffer_length then
+                if payload_len >= 12 + options_length + buffer_length then
                     -- Call our PKCS#11 RPC dissector on just the payload
                     pkcs11_rpc_proto.dissector(payload_tvb, pktinfo, root)
                 end
