@@ -468,20 +468,17 @@ local function heur_dissect_pkcs11_rpc(tvbuf, pktinfo, root)
         local options_length = tvbuf(4, 4):uint()
         local buffer_length = tvbuf(8, 4):uint()
 
-        -- Sanity checks
-        if options_length < 10000 and buffer_length < 1000000 then
-            -- Check if total size matches
-            if pktlen >= 12 + options_length + buffer_length then
-                -- Try to read call ID from body
-                if buffer_length >= 4 then
-                    local body_offset = 12 + options_length
-                    local call_id = tvbuf(body_offset, 4):uint()
+        -- Check if total size matches
+        if pktlen >= 12 + options_length + buffer_length then
+            -- Try to read call ID from body
+            if buffer_length >= 4 then
+                local body_offset = 12 + options_length
+                local call_id = tvbuf(body_offset, 4):uint()
 
-                    -- Check if call ID is valid
-                    if call_names[call_id] then
-                        pkcs11_rpc_proto.dissector(tvbuf, pktinfo, root)
-                        return true
-                    end
+                -- Check if call ID is valid
+                if call_names[call_id] then
+                    pkcs11_rpc_proto.dissector(tvbuf, pktinfo, root)
+                    return true
                 end
             end
         end
@@ -503,6 +500,8 @@ function vsock_wrapper_proto.dissector(tvbuf, pktinfo, root)
     local vsock_dissector = Dissector.get("vsock")
     if vsock_dissector then
         vsock_dissector:call(tvbuf, pktinfo, root)
+    else
+	return
     end
 
     -- Now find where the payload starts
@@ -521,8 +520,8 @@ function vsock_wrapper_proto.dissector(tvbuf, pktinfo, root)
                 local options_length = payload_tvb(4, 4):uint()
                 local buffer_length = payload_tvb(8, 4):uint()
 
-                -- Sanity check
-                if options_length < 10000 and buffer_length < 1000000 then
+                -- Check if total size matches
+		if payload_len >= 12 + options_length + buffer_length then
                     -- Call our PKCS#11 RPC dissector on just the payload
                     pkcs11_rpc_proto.dissector(payload_tvb, pktinfo, root)
                 end
@@ -539,7 +538,4 @@ end
 
 -- Register the wrapper on wtap_encap for vsockmon captures (WTAP_ENCAP_VSOCK = 185)
 local wtap_encap = DissectorTable.get("wtap_encap")
-if wtap_encap then
-    print("Registering PKCS11-RPC wrapper on wtap_encap.185 (VSOCK)")
-    wtap_encap:add(185, vsock_wrapper_proto)
-end
+wtap_encap:add(185, vsock_wrapper_proto)
