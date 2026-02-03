@@ -56,7 +56,7 @@ To verify the dissector is loaded:
 ### Capturing PKCS #11 RPC Traffic
 
 The easiest way to capture the PKCS #11 RPC protocol is using the
-VSOCK transport, even if you are using it without a VM.
+VSOCK transport, even if you are not running a VM.
 
 ```bash
 # Set up vsockmon interface
@@ -126,156 +126,9 @@ pkcs11-rpc.call_name contains "Encrypt"
 pkcs11-rpc.call_id == 0
 ```
 
-## Protocol Structure
-
-### Version Negotiation
-
-When a connection is established, a single byte is exchanged:
-
-```
-Version 0: 0x00 (PKCS #11 2.40)
-Version 1: 0x01 (PKCS #11 3.0)
-Version 2: 0x02 (with mechanism parameter updates)
-```
-
-### Message Header
-
-Every RPC message has a 12-byte header:
-
-```
-+-------------------+
-| Call Code (4B)    |  Monotonic request identifier
-+-------------------+
-| Options Len (4B)  |  Length of options area
-+-------------------+
-| Buffer Len (4B)   |  Length of message body
-+-------------------+
-```
-
-### Message Body
-
-The message body contains:
-
-```
-+-------------------+
-| Call ID (4B)      |  PKCS #11 function identifier
-+-------------------+
-| Signature Len(4B) |  Length of signature string
-+-------------------+
-| Signature (var)   |  Type signature string
-+-------------------+
-| Data (var)        |  Serialized arguments/return values
-+-------------------+
-```
-
-## Type Signature Reference
-
-The dissector understands all PKCS #11 RPC type codes:
-
-| Code | Type | Description |
-|------|------|-------------|
-| `y` | CK_BYTE | Single byte |
-| `u` | CK_ULONG | 32-bit unsigned integer |
-| `v` | CK_VERSION | 2 bytes (major, minor) |
-| `z` | String | Null-terminated UTF-8 string |
-| `s` | String | Space-padded string |
-| `M` | CK_MECHANISM | Mechanism type + parameters |
-| `A` | CK_ATTRIBUTE | Attribute type + value |
-| `P` | Mechanism param | Updated mechanism parameter |
-| `a_` | Array | Array of type `_` |
-| `f_` | Buffer | Output buffer for type `_` |
-
-## Examples
-
-### Example 1: C_GetMechanismList
-
-**Request:**
-```
-Call ID: 7 (C_GetMechanismList)
-Signature: "ufu"
-Data:
-  - u: Slot ID (e.g., 0x00000001)
-  - f: Buffer indicator
-  - u: Buffer capacity (e.g., 0x00000000 for size query)
-```
-
-**Response:**
-```
-Call ID: 7
-Signature: "au"
-Data:
-  - au: Array of mechanism types
-    Count: 50
-    [0] = 0x00000001 (CKM_RSA_PKCS)
-    [1] = 0x00000009 (CKM_RSA_PKCS_OAEP)
-    ...
-```
-
-### Example 2: C_Encrypt
-
-**Request:**
-```
-Call ID: 30 (C_Encrypt)
-Signature: "uayfy"
-Data:
-  - u: Session handle (e.g., 0x00000001)
-  - ay: Plaintext data
-    Length: 16
-    Data: [plaintext bytes]
-  - fy: Buffer for ciphertext (size query or buffer)
-```
-
-**Response:**
-```
-Call ID: 30
-Signature: "ay"
-Data:
-  - ay: Ciphertext data
-    Length: 256
-    Data: [encrypted bytes]
-```
-
-### Example 3: C_GetAttributeValue
-
-**Request:**
-```
-Call ID: 24 (C_GetAttributeValue)
-Signature: "uufA"
-Data:
-  - u: Session handle (e.g., 0x00000001)
-  - u: Object handle (e.g., 0x80000001)
-  - fA: Attribute template
-    Count: 2
-    Attribute #1:
-      Type: 0x00000000 (CKA_CLASS)
-      Value Length: 0 (query)
-    Attribute #2:
-      Type: 0x00000001 (CKA_TOKEN)
-      Value Length: 0 (query)
-```
-
-**Response:**
-```
-Call ID: 24
-Signature: "aAu"
-Data:
-  - aA: Attribute array
-    Count: 2
-    Attribute #1:
-      Type: 0x00000000 (CKA_CLASS)
-      Value Length: 4
-      Value: 0x00000003 (CKO_SECRET_KEY)
-    Attribute #2:
-      Type: 0x00000001 (CKA_TOKEN)
-      Value Length: 1
-      Value: 0x01 (TRUE)
-  - u: Return value (CK_RV)
-    Value: 0x00000000 (CKR_OK)
-```
-
 ## Supported Functions
 
-The dissector supports all 90 PKCS #11 functions:
+The dissector supports all 90 PKCS #11 functions from 3 protocol versions:
 
 ### Version 0 (PKCS #11 2.40)
 - C_Initialize through C_WaitForSlotEvent (Call IDs 1-65)
